@@ -23,6 +23,7 @@ struct ShapeModel {
 class CanvasView: UIView {
     
     var shapes: [ShapeModel] = []
+    var selectedShapeLayer: CAShapeLayer?
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -42,24 +43,20 @@ class CanvasView: UIView {
     func addShape(_ shape: ShapeModel) {
         shapes.append(shape)
         
+        let shapeLayer: CAShapeLayer
+        
         switch shape.type {
         case .rectangle:
-            let shapeLayer = CAShapeLayer()
+            shapeLayer = CAShapeLayer()
             let path = UIBezierPath(rect: shape.frame)
             shapeLayer.path = path.cgPath
             shapeLayer.fillColor = UIColor.blue.cgColor
-            shapeLayer.strokeColor = UIColor.black.cgColor
-            shapeLayer.lineWidth = 5
-            layer.addSublayer(shapeLayer)
             
         case .circle:
-            let shapeLayer = CAShapeLayer()
+            shapeLayer = CAShapeLayer()
             let path = UIBezierPath(ovalIn: shape.frame)
             shapeLayer.path = path.cgPath
             shapeLayer.fillColor = UIColor.red.cgColor
-            shapeLayer.strokeColor = UIColor.black.cgColor
-            shapeLayer.lineWidth = 5
-            layer.addSublayer(shapeLayer)
             
         case .text:
             let textLayer = CATextLayer()
@@ -68,8 +65,17 @@ class CanvasView: UIView {
             textLayer.foregroundColor = UIColor.black.cgColor
             textLayer.fontSize = 16
             textLayer.alignmentMode = .center
+            textLayer.name = shape.id.uuidString
             layer.addSublayer(textLayer)
+            return
         }
+        
+        shapeLayer.strokeColor = UIColor.black.cgColor
+        shapeLayer.lineWidth = 5
+        shapeLayer.name = shape.id.uuidString
+        shapeLayer.frame = shape.frame // Set the frame correctly
+        
+        layer.addSublayer(shapeLayer)
     }
     
     func loadShapes(from canvas: Canvas) {
@@ -83,4 +89,62 @@ class CanvasView: UIView {
             addShape(shape)
         }
     }
+    
+    func selectShape(at point: CGPoint) -> CAShapeLayer? {
+        let convertedPoint = layer.convert(point, from: self.layer)
+        
+        if let hitLayer = layer.hitTest(convertedPoint), let shapeLayer = findShapeLayer(in: hitLayer) {
+            if selectedShapeLayer == shapeLayer {
+                selectedShapeLayer?.borderWidth = 0 // Deselect if the same shape is tapped again
+                selectedShapeLayer = nil
+            } else {
+                selectedShapeLayer?.borderWidth = 0 // Deselect previous shape
+                selectedShapeLayer = shapeLayer
+                selectedShapeLayer?.borderWidth = 2
+                selectedShapeLayer?.borderColor = UIColor.red.cgColor // Highlight selected shape
+            }
+            return selectedShapeLayer
+        } else {
+            selectedShapeLayer?.borderWidth = 0 // Deselect previous shape
+            selectedShapeLayer = nil
+            return nil
+        }
+    }
+    
+    private func findShapeLayer(in layer: CALayer) -> CAShapeLayer? {
+        if let shapeLayer = layer as? CAShapeLayer, shapes.contains(where: { $0.id.uuidString == shapeLayer.name }) {
+            return shapeLayer
+        } else if let sublayers = layer.sublayers {
+            for sublayer in sublayers {
+                if let foundLayer = findShapeLayer(in: sublayer) {
+                    return foundLayer
+                }
+            }
+        }
+        return nil
+    }
+    
+    func moveSelectedShape(by translation: CGPoint) {
+        guard let selectedShapeLayer = selectedShapeLayer else { return }
+        
+        selectedShapeLayer.frame = selectedShapeLayer.frame.offsetBy(dx: translation.x, dy: translation.y)
+        
+        if let shapeIndex = shapes.firstIndex(where: { $0.id.uuidString == selectedShapeLayer.name }) {
+            shapes[shapeIndex].frame = selectedShapeLayer.frame
+            NotificationCenter.default.post(name: .shapeMoved, object: nil, userInfo: ["shape": shapes[shapeIndex]])
+        }
+    }
+    
+    func deleteSelectedShape() {
+        guard let selectedShapeLayer = selectedShapeLayer else { return }
+        selectedShapeLayer.removeFromSuperlayer()
+        shapes.removeAll { $0.id.uuidString == selectedShapeLayer.name }
+        NotificationCenter.default.post(name: .shapeDeleted, object: nil, userInfo: ["shape": selectedShapeLayer])
+        self.selectedShapeLayer = nil
+    }
+}
+
+extension Notification.Name {
+    static let shapeMoved = Notification.Name("shapeMoved")
+    static let shapeDeleted = Notification.Name("shapeDeleted")
 }

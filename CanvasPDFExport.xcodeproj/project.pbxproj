@@ -59,10 +59,10 @@
 				73E9F0BF2C0CF66100A7C501 /* AppDelegate.swift */,
 				73E9F0C12C0CF66100A7C501 /* SceneDelegate.swift */,
 				73E9F0DA2C0D24F500A7C501 /* CanvasSelectorView.swift */,
-				73E9F0DD2C0DD50800A7C501 /* CanvasViewController.swift */,
 				73E9F0DF2C0DD56F00A7C501 /* PersistenceController.swift */,
-				73E9F0D62C0D0B3E00A7C501 /* CanvasView.swift */,
 				73E9F0D82C0D0B6700A7C501 /* PDFGenerator.swift */,
+				73E9F0D62C0D0B3E00A7C501 /* CanvasView.swift */,
+				73E9F0DD2C0DD50800A7C501 /* CanvasViewController.swift */,
 				73E9F0DC2C0DD48F00A7C501 /* Resources */,
 				73E9F0BD2C0CF66100A7C501 /* Products */,
 			);
